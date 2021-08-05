@@ -38,7 +38,10 @@ def get_model(error_weights):
     opt = tf.keras.optimizers.Adam(learning_rate=0.0001)
 
     # loss = weighted_loss_averaged(error_weights) # Just going to record as a metric
-    metrics = ['accuracy', metric_functions.WeightedError(error_weights)]
+    metrics = []
+    metrics.append(metric_functions.VolumeAccuracy(8000))
+    # metrics.append(metric_functions.DiscreteAccuracy(8000))
+    # metrics.append(metric_functions.WeightedError(error_weights))
 
     model = tf.keras.Model(inputs=features, outputs=pred)
     model.compile(optimizer=opt, loss='mse', metrics=metrics)
@@ -51,6 +54,7 @@ def parse_args(args):
     parser.add_argument('path', metavar='Path', help='Directory for all data files and weights.')
     parser.add_argument('experiment', metavar='Experiment',
                         help='The label of the experiment. It is used to determine data file names and checkpoints.')
+    parser.add_argument('--epochs', type=int, metavar='Epochs', help='Number of training epochs. Default 1000', default=1000)
     ns = parser.parse_args(args)
     ns.save_path = pathlib.Path(ns.save_path)
     ns.path = pathlib.Path(ns.path)
@@ -102,7 +106,7 @@ def main(args):
         f'Creating model using "{params.experiment + ".npz"}" and "{params.experiment + "_edt.npz"}" located in'
         f' "{params.path}". The checkpoints will be saved in "{exp_dir}".')
     print(model.summary())
-    model.fit(x_train, y_train, batch_size=100, epochs=1000, callbacks=callbacks, validation_data=(x_eval, y_eval))
+    model.fit(x_train, y_train, batch_size=100, epochs=params.epochs, callbacks=callbacks, validation_data=(x_eval, y_eval))
 
 
 if __name__ == '__main__':
