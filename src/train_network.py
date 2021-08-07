@@ -39,9 +39,11 @@ def get_model(error_weights):
 
     # loss = weighted_loss_averaged(error_weights) # Just going to record as a metric
     metrics = []
-    metrics.append(metric_functions.VolumeAccuracy(8000))
-    # metrics.append(metric_functions.DiscreteAccuracy(8000))
-    # metrics.append(metric_functions.WeightedError(error_weights))
+    metrics.append(metric_functions.WeightedError(error_weights))
+    metrics.append(metric_functions.AverageVolume())
+    metrics.append(metric_functions.VolumeAccuracy())
+    metrics.append(metric_functions.FPError())
+    metrics.append(metric_functions.FNError())
 
     model = tf.keras.Model(inputs=features, outputs=pred)
     model.compile(optimizer=opt, loss='mse', metrics=metrics)

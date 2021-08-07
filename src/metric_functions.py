@@ -27,12 +27,16 @@ class WeightedError(tf.keras.metrics.Metric):
         return tf.math.divide(tf.math.multiply(self.values, self.weights), self.samples)
 
 
-class DiscreteAccuracy(tf.keras.metrics.Metric):
-    def __init__(self, dimension, name='DiscreteAccuracy', **kwargs):
-        super(DiscreteAccuracy, self).__init__(name=name, **kwargs)
-        self.dimension = dimension
-        self.counts = self.add_weight(name='DA_counts', initializer='zeros')
-        self.totals = self.add_weight(name='DA_total', initializer='zeros')
+@tf.function
+def discrete_prediction(y_pred):
+    return tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
+
+
+class AverageVolume(tf.keras.metrics.Metric):
+    def __init__(self, name='AverageVolume', **kwargs):
+        super(AverageVolume, self).__init__(name=name, **kwargs)
+        self.volumes = self.add_weight(name='volumes', initializer='zeros') # Sum of pred volumes / true volumes
+        self.samples = self.add_weight(name='samples', initializer='zeros') # Sample counts
     
     def reset_states(self):
         self.reset_state()
@@ -43,21 +47,20 @@ class DiscreteAccuracy(tf.keras.metrics.Metric):
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         y_pred = tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
-        val = tf.reduce_sum(tf.cast(tf.equal(y_pred, y_true), dtype=tf.float32))
-        self.counts.assign_add(val)
-        self.totals.assign_add(y_pred.shape[0] * y_pred.shape[1])
+        y_true = tf.reduce_sum(y_true, axis = 1) # True Volumes
+        self.volumes.assign_add(tf.reduce_sum(tf.math.divide(y_pred, y_true))) # Volume Ratios
+        self.samples.assign_add(y_pred.shape[0]) # Sample count
 
 
     def result(self):
-        return tf.math.divide(self.counts, self.totals)
+        return tf.math.divide(self.volumes, self.samples)
 
 
 class VolumeAccuracy(tf.keras.metrics.Metric):
-    def __init__(self, dimension, name='VolumeAccuracy', **kwargs):
+    def __init__(self, name='VolumeAccuracy', **kwargs):
         super(VolumeAccuracy, self).__init__(name=name, **kwargs)
-        self.dimension = dimension
-        self.error_volume_ratios = self.add_weight(name='VA_EVR', initializer='zeros')
-        self.samples = self.add_weight(name='VA_VS', initializer='zeros')
+        self.error_volumes = self.add_weight(name='error_volumes', initializer='zeros')
+        self.samples = self.add_weight(name='samples', initializer='zeros')
     
     def reset_states(self):
         self.reset_state()
@@ -67,24 +70,23 @@ class VolumeAccuracy(tf.keras.metrics.Metric):
             s.assign(tf.zeros(shape=s.shape))
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        y_pred = tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
+        y_pred = dtf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
         err = tf.reduce_sum(tf.cast(tf.not_equal(y_pred, y_true), dtype=tf.float32), axis = 1) # Volume of FP and FN error of each sample.
         vol = tf.reduce_sum(y_true, axis = 1) # Volume of each sample.
         vol_err = tf.math.divide(err, vol) # Ratio of Err to True Volume
 
-        self.error_volume_ratios.assign_add(tf.reduce_sum(vol_err)) # Sum of Ratios
+        self.error_volumes.assign_add(tf.reduce_sum(vol_err)) # Sum of Ratios
         self.samples.assign_add(y_pred.shape[0]) # Count of Samples
 
     def result(self):
-        return 1 - tf.math.divide(self.error_volume_ratios, self.samples) # 1 - Avg err ratio per sample.
+        return 1 - tf.math.divide(self.error_volumes, self.samples) # 1 - Avg err ratio per sample.
 
 
-class FPVolumeAccuracy(tf.keras.metrics.Metric):
-    def __init__(self, dimension, name='FPVolumeAccuracy', **kwargs):
-        super(FPVolumeAccuracy, self).__init__(name=name, **kwargs)
-        self.dimension = dimension
-        self.error_volume_ratios = self.add_weight(name='PVA_EVR', initializer='zeros')
-        self.samples = self.add_weight(name='PVA_VS', initializer='zeros')
+class FPError(tf.keras.metrics.Metric):
+    def __init__(self, name='FPError', **kwargs):
+        super(FPError, self).__init__(name=name, **kwargs)
+        self.error_volumes = self.add_weight(name='error_volumes', initializer='zeros')
+        self.samples = self.add_weight(name='samples', initializer='zeros')
     
     def reset_states(self):
         self.reset_state()
@@ -99,19 +101,18 @@ class FPVolumeAccuracy(tf.keras.metrics.Metric):
         vol = tf.reduce_sum(y_true, axis = 1) # Volume of each sample.
         vol_err = tf.math.divide(err, vol) # Ratio of Err to True Volume
 
-        self.error_volume_ratios.assign_add(tf.reduce_sum(vol_err)) # Sum of Ratios
+        self.error_volumes.assign_add(tf.reduce_sum(vol_err)) # Sum of Ratios
         self.samples.assign_add(y_pred.shape[0]) # Count of Samples
 
     def result(self):
-        return 1 - tf.math.divide(self.error_volume_ratios, self.samples) # 1 - Avg err ratio per sample.
+        return tf.math.divide(self.error_volumes, self.samples) # 1 - Avg err ratio per sample.
 
     
-class FNVolumeAccuracy(tf.keras.metrics.Metric):
-    def __init__(self, dimension, name='FNVolumeAccuracy', **kwargs):
-        super(FPVolumeAccuracy, self).__init__(name=name, **kwargs)
-        self.dimension = dimension
-        self.error_volume_ratios = self.add_weight(name='NVA_EVR', initializer='zeros')
-        self.samples = self.add_weight(name='NVA_VS', initializer='zeros')
+class FNError(tf.keras.metrics.Metric):
+    def __init__(self, name='FNError', **kwargs):
+        super(FNError, self).__init__(name=name, **kwargs)
+        self.error_volumes = self.add_weight(name='error_volumes', initializer='zeros')
+        self.samples = self.add_weight(name='samples', initializer='zeros')
     
     def reset_states(self):
         self.reset_state()
@@ -122,15 +123,15 @@ class FNVolumeAccuracy(tf.keras.metrics.Metric):
 
     def update_state(self, y_true, y_pred, sample_weight=None):
         y_pred = tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
-        err = tf.reduce_sum(tf.cast(tf.logical_and(tf.not_equal(y_pred, y_true), tf.math.equal(y_true, 1)), dtype=tf.float32), axis = 1) # Volume of FP error of each sample.
+        err = tf.reduce_sum(tf.cast(tf.logical_and(tf.not_equal(y_pred, y_true), tf.math.equal(y_true, 1)), dtype=tf.float32), axis = 1) # Volume of FN error of each sample.
         vol = tf.reduce_sum(y_true, axis = 1) # Volume of each sample.
         vol_err = tf.math.divide(err, vol) # Ratio of Err to True Volume
 
-        self.error_volume_ratios.assign_add(tf.reduce_sum(vol_err)) # Sum of Ratios
+        self.error_volumes.assign_add(tf.reduce_sum(vol_err)) # Sum of Ratios
         self.samples.assign_add(y_pred.shape[0]) # Count of Samples
 
     def result(self):
-        return 1 - tf.math.divide(self.error_volume_ratios, self.samples) # 1 - Avg err ratio per sample.
+        return tf.math.divide(self.error_volumes, self.samples) # 1 - Avg err ratio per sample.
 
 def make_tensors():
     import numpy as np
