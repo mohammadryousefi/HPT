@@ -45,7 +45,7 @@ class AverageVolume(tf.keras.metrics.Metric):
             s.assign(tf.zeros(shape=s.shape))
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        y_pred = tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
+        y_pred = tf.reduce_sum(tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1), axis=1)
         y_true = tf.reduce_sum(y_true, axis=1)  # True Volumes
         self.volumes.assign_add(tf.reduce_sum(tf.math.divide(y_pred, y_true)))  # Volume Ratios
         self.samples.assign_add(y_pred.shape[0])  # Sample count
