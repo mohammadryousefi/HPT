@@ -23,7 +23,8 @@ class WeightedError(tf.keras.metrics.Metric):
         self.samples.assign_add(y_pred.shape[0])
 
     def result(self):
-        return tf.math.divide(tf.math.multiply(self.values, self.weights), self.samples)
+        values = tf.math.multiply(self.values, self.weights)
+        return tf.math.divide(values, self.samples)
 
 
 @tf.function
