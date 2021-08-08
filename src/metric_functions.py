@@ -4,7 +4,7 @@ import tensorflow as tf
 class WeightedError(tf.keras.metrics.Metric):
     def __init__(self, weights, name='WeightedError', **kwargs):
         super(WeightedError, self).__init__(name=name, **kwargs)
-        self.space_weights = tf.constant(weights)
+        self.space_weights = tf.constant(weights, dtype=tf.float32)
         self.values = self.add_weight(name='WE_values', shape=weights.shape, initializer='zeros')
         self.samples = self.add_weight(name='WE_samples', initializer='zeros')
 
@@ -23,8 +23,8 @@ class WeightedError(tf.keras.metrics.Metric):
         self.samples.assign_add(y_pred.shape[0])
 
     def result(self):
-        values = tf.math.multiply(self.values, self.weights)
-        return tf.math.divide(values, self.samples)
+        values = tf.math.multiply(self.values, self.space_weights)
+        return tf.divide(values, self.samples)
 
 
 @tf.function
