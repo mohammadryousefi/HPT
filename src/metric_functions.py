@@ -209,7 +209,7 @@ class Recall(tf.keras.metrics.Metric):
 
 class F1Score(tf.keras.metrics.Metric):
     def __init__(self, name='F1Score', **kwargs):
-        super(F1, self).__init__(name=name, **kwargs)
+        super(F1Score, self).__init__(name=name, **kwargs)
         self.f1_sum = self.add_weight(name='f1_sum', initializer='zeros')
         self.samples = self.add_weight(name='samples', initializer='zeros')
 
