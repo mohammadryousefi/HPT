@@ -34,10 +34,10 @@ def train(config):
         model = k.Sequential()
 
         model.add(k.Input((config['InputDim'],), name='JointConfigs'))
-        model.add(k.layers.Dense(config['layer1'], activation='relu'), name='Hidden1')
-        model.add(k.layers.Dense(config['layer2'], activation='relu'), name='Hidden2')
-        model.add(k.layers.Dense(config['layer3'], activation='relu'), name='Hidden3')
-        model.add(k.layers.Dense(config['layer4'], activation='relu'), name='Hidden4')
+        model.add(k.layers.Dense(config['layer1'], activation='relu', name='Hidden1'))
+        model.add(k.layers.Dense(config['layer2'], activation='relu', name='Hidden2'))
+        model.add(k.layers.Dense(config['layer3'], activation='relu', name='Hidden3'))
+        model.add(k.layers.Dense(config['layer4'], activation='relu', name='Hidden4'))
         model.add(k.layers.Dense(config['OutputDim'], activation='relu', name='Voxels'))
         metrics = [metric_functions.F1Score(), metric_functions.AverageVolume()]
         model.compile(optimizer=k.optimizers.Adam(1e-4), loss='mse', metrics=metrics)
