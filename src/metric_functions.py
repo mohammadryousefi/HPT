@@ -221,6 +221,10 @@ class F1Score(tf.keras.metrics.Metric):
             s.assign(tf.zeros(shape=s.shape))
 
     def update_state(self, y_true, y_pred, sample_weight=None):
+        print(f"{'*' * 80}\n"
+              f"YT: {y_true.shape}\n"
+              f"YP: {y_pred.shape}\n"
+              f"{'*' * 80}")
         y_pred = tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
         tp = tf.reduce_sum(
             tf.cast(tf.logical_and(tf.equal(y_pred, y_true), tf.math.equal(y_true, 1)), dtype=tf.float32),
@@ -236,7 +240,7 @@ class F1Score(tf.keras.metrics.Metric):
 
         self.f1_sum.assign_add(tf.reduce_sum(
             tf.math.divide(tp, tf.math.add(tp, tf.math.scalar_mul(0.5, tf.math.add(fp, fn))))))  # F1Scores
-        self.samples.assign_add(y_pred.shape[0])  # Count of Samples
+        self.samples.assign_add(y_true.shape[0])  # Count of Samples
 
     def result(self):
         return tf.math.divide(self.f1_sum, self.samples)  # Recall Average
