@@ -33,7 +33,7 @@ def train(config):
     else:
         model = k.Sequential()
 
-        model.add(k.Input((config['InputDim'],), name='JointConfigs'))
+        model.add(k.Input((config['InputDim'],), batch_size=config['BatchSize'], name='JointConfigs'))
         model.add(k.layers.Dense(config['layer1'], activation='relu', name='Hidden1'))
         model.add(k.layers.Dense(config['layer2'], activation='relu', name='Hidden2'))
         model.add(k.layers.Dense(config['layer3'], activation='relu', name='Hidden3'))
