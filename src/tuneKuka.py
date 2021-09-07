@@ -100,7 +100,7 @@ def main():
     params = get_params(sys.argv[1:])
 
     # ray.init(address='64.106.20.170', num_cpus=1, num_gpus=1)  # Initialize Local
-    ray.init(redis_address='64.106.20.170')  # Initialize on cluster (Started on CLI)
+    ray.init(address='64.106.20.170:6379')  # Initialize on cluster (Started on CLI)
 
     config = {
         'InputDim': 14,
