@@ -240,7 +240,7 @@ class F1Score(tf.keras.metrics.Metric):
 
         self.f1_sum.assign_add(tf.reduce_sum(
             tf.math.divide(tp, tf.math.add(tp, tf.math.scalar_mul(0.5, tf.math.add(fp, fn))))))  # F1Scores
-        self.samples.assign_add(y_true.shape[0])  # Count of Samples
+        self.samples.assign_add(y_pred.shape[0])  # Count of Samples
 
     def result(self):
         return tf.math.divide(self.f1_sum, self.samples)  # Recall Average
