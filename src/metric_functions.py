@@ -221,10 +221,6 @@ class F1Score(tf.keras.metrics.Metric):
             s.assign(tf.zeros(shape=s.shape))
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        print(f"{'*' * 80}\n"
-              f"YT: {y_true.shape}\n"
-              f"YP: {y_pred.shape}\n"
-              f"{'*' * 80}")
         y_pred = tf.clip_by_value(tf.math.floor(tf.math.scalar_mul(2, y_pred)), 0, 1)
         tp = tf.reduce_sum(
             tf.cast(tf.logical_and(tf.equal(y_pred, y_true), tf.math.equal(y_true, 1)), dtype=tf.float32),
