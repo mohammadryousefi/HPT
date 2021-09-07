@@ -107,7 +107,7 @@ def main():
         'InputDim': 14,
         'OutputDim': 8000,
         'OutputShape': (20, 20, 20),
-        'DataPath': '/nfs/data/TapiaLab/MYousefi/HPT/data/Kuka_14_20x20x20.npz',
+        'DataPath': '/nfs/data/TapiaLab/HyperParameterOptimization/Data/Kuka_14_20x20x20.npz',  # Make sure it exists.
         'TrainSamples': 90000,
         'Epochs': 500,
         'BatchSize': 32,
