@@ -48,17 +48,10 @@ def train(config):
     # Expects CSR matrix of shape N, M where N = Num Samples and M = 2 * DoF + DimX * DimY * DimZ
     from scipy.sparse import load_npz
     mtx = load_npz(config['DataPath'])
-    x_train = mtx[:config['InputDim'], :config['TrainSamples']]
-    y_train = mtx[config['InputDim']:, :config['TrainSamples']]
-    x_val = mtx[:config['InputDim'], config['TrainSamples']:]
-    y_val = mtx[config['InputDim']:, config['TrainSamples']:]
-    print(f"{'*' * 80}\n"
-          f"Shape of mtx: {mtx.shape}\n"
-          f"Shape of x_train: {x_train.shape}\n"
-          f"Shape of y_train: {y_train.shape}\n"
-          f"Shape of x_val: {x_val.shape}\n"
-          f"Shape of y_val: {y_val.shape}\n"
-          f"{'*' * 80}")
+    x_train = mtx[:config['TrainSamples'], :config['InputDim']]
+    y_train = mtx[:config['TrainSamples'], config['InputDim']:]
+    x_val = mtx[config['TrainSamples']:, :config['InputDim']]
+    y_val = mtx[config['TrainSamples']:, config['InputDim']:]
     from distance import compute_edt
     edt = compute_edt(y_val, config['OutputShape'])
 
