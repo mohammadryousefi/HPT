@@ -103,6 +103,7 @@ def main():
     ray.init(address='64.106.20.170:6379')  # Initialize on cluster (Started on CLI)
 
     config = {
+        'Checkpoint': None,
         'InputDim': 14,
         'OutputDim': 8000,
         'Space': (20, 20, 20),
