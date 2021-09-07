@@ -110,7 +110,7 @@ def main():
         'DataPath': '/nfs/data/TapiaLab/HyperParameterOptimization/Data/Kuka_14_20x20x20.npz',  # Make sure it exists.
         'TrainSamples': 90000,
         'Epochs': 500,
-        'BatchSize': 32,
+        'BatchSize': 8,
         'Patience': 2,
         'Alpha': 0.5,
         'Beta': 0.1,
