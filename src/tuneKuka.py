@@ -67,7 +67,7 @@ def train(config):
 
     import numpy as np
     values = model.evaluate(x_val, y_val, batch_size=config['BatchSize'], verbose=0)
-    y_pred = np.clip(np.floor(2 * model.predict(x_val, batch_size=config['BatchSize'], verbose=0).tonumpy()), 0, 1)
+    y_pred = np.clip(np.floor(2 * model.predict(x_val, batch_size=config['BatchSize'], verbose=0)), 0, 1)
     max_error_distance = np.max(edt[np.where(y_pred != y_val)])
     if max_error_distance > config['MaxError']:
         fitness = 0
