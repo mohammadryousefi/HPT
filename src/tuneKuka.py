@@ -43,42 +43,54 @@ def train(config):
         model.compile(optimizer=k.optimizers.Adam(1e-4), loss='mse', metrics=metrics)
 
     callbacks = [k.callbacks.EarlyStopping(patience=config['Patience'])]
-
+    print(model.metrics_names)
     # Load Data
     # Expects CSR matrix of shape N, M where N = Num Samples and M = 2 * DoF + DimX * DimY * DimZ
     from scipy.sparse import load_npz
     mtx = load_npz(config['DataPath'])
     x_train = mtx[:config['TrainSamples'], :config['InputDim']]
     y_train = mtx[:config['TrainSamples'], config['InputDim']:]
-    x_val = mtx[config['TrainSamples']:, :config['InputDim']]
-    y_val = mtx[config['TrainSamples']:, config['InputDim']:]
+
+    count = mtx.shape[0] - config['TrainSamples']
+    if count < 2:
+        raise ValueError(
+            f'No validation samples remain. Given {mtx.shape[0]} data samples and using {config["TrainSamples"]}'
+            f'for training.')
+
+    count //= 2
+    x_val = mtx[config['TrainSamples']:config['TrainSamples'] + count, :config['InputDim']]
+    y_val = mtx[config['TrainSamples']:config['TrainSamples'] + count, config['InputDim']:]
+    x_test = mtx[config['TrainSamples'] + count:, :config['InputDim']]
+    y_test = mtx[config['TrainSamples'] + count:, config['InputDim']:]
     from distance import compute_edt
-    edt = compute_edt(y_val, config['OutputShape'])
+    edt = compute_edt(y_test, config['OutputShape'])
 
     # Work with numpy.array objects
     x_train = x_train.toarray()
     y_train = y_train.toarray()
     x_val = x_val.toarray()
     y_val = y_val.toarray()
+    x_test = x_test.toarray()
+    y_test = y_test.toarray()
 
     del mtx
     model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=config['Epochs'],
               batch_size=config['BatchSize'], callbacks=callbacks, verbose=0)
 
     import numpy as np
-    values = model.evaluate(x_val, y_val, batch_size=config['BatchSize'], verbose=0)
-    y_pred = np.clip(np.floor(2 * model.predict(x_val, batch_size=config['BatchSize'], verbose=0)), 0, 1)
-    max_error_distance = np.max(edt[np.where(y_pred != y_val)])
+    values = model.evaluate(x_test, y_test, batch_size=config['BatchSize'], verbose=0, return_dict=True)
+    print(values)
+    y_pred = np.clip(np.floor(2 * model.predict(x_test, batch_size=config['BatchSize'], verbose=0)), 0, 1)
+    max_error_distance = np.max(edt[np.where(y_pred != y_test)])
+    f1_score = values['F1Score']
+    volume = values['AverageVolume']
     if max_error_distance > config['MaxError']:
         fitness = 0
     else:
-
-        values = model.evaluate(x_val, y_val, batch_size=config['BatchSize'])
-
-        _, f1_score, volume = values
         fitness = np.exp(- max_error_distance * config['Beta']) * (
                 config['Alpha'] * f1_score + (1 - config['Alpha']) * np.exp(-np.abs(np.log(volume))))
-    return {'Loss': values[0], 'Fitness': fitness}
+    return {'Loss': values['loss'], 'Fitness': fitness, 'MaxError': max_error_distance, 'F1Score': f1_score,
+            'VolumeAccuracy': volume, 'EarlyStop': callbacks[0].stopped_epoch}
 
 
 def get_params(args):
@@ -87,6 +99,30 @@ def get_params(args):
     _parser.add_argument('--local_dir', required=True, help='Path to the root directory for experiment results.')
     _parser.add_argument('--exp_name', required=True, help='Unique experiment identifier.')
     return _parser.parse_args(args)
+
+
+def fixed_config():
+    from ray import tune
+
+    config = {
+        'Checkpoint': None,
+        'InputDim': 14,
+        'OutputDim': 8000,
+        'OutputShape': (20, 20, 20),
+        'DataPath': '/nfs/data/TapiaLab/HyperParameterOptimization/Data/Kuka_14_20x20x20.npz',  # Make sure it exists.
+        'TrainSamples': 80000,
+        'Epochs': 500,
+        'BatchSize': 8,
+        'Patience': 2,
+        'Alpha': 0.5,
+        'Beta': 0.1,
+        'MaxError': 3,
+        'layer1': tune.choice([64, 128, 256, 512, 1024, 2048]),
+        'layer2': tune.choice([64, 128, 256, 512, 1024, 2048]),
+        'layer3': tune.choice([64, 128, 256, 512, 1024, 2048]),
+        'layer4': tune.choice([64, 128, 256, 512, 1024, 2048])
+    }
+    return config
 
 
 # Requirements Ray (Tune, Defaults, Tensorboard), Tensorflow
@@ -101,29 +137,9 @@ def main():
 
     # ray.init(address='64.106.20.170', num_cpus=1, num_gpus=1)  # Initialize Local
     ray.init(address='64.106.20.170:6379')  # Initialize on cluster (Started on CLI)
-
-    config = {
-        'Checkpoint': None,
-        'InputDim': 14,
-        'OutputDim': 8000,
-        'OutputShape': (20, 20, 20),
-        'DataPath': '/nfs/data/TapiaLab/HyperParameterOptimization/Data/Kuka_14_20x20x20.npz',  # Make sure it exists.
-        'TrainSamples': 90000,
-        'Epochs': 500,
-        'BatchSize': 8,
-        'Patience': 2,
-        'Alpha': 0.5,
-        'Beta': 0.1,
-        'MaxError': 2,
-        'layer1': tune.choice([64, 128, 256, 512, 1024, 2048]),
-        'layer2': tune.choice([64, 128, 256, 512, 1024, 2048]),
-        'layer3': tune.choice([64, 128, 256, 512, 1024, 2048]),
-        'layer4': tune.choice([64, 128, 256, 512, 1024, 2048])
-    }
-
+    config = fixed_config()
     search_alg = ConcurrencyLimiter(HyperOptSearch(), max_concurrent=4)
 
-    # TODO: Add unique identifier to experiments from CLI arguments.
     analysis = tune.run(
         train,
         name=params.exp_name,  # f"{UID}"
