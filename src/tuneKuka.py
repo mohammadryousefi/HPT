@@ -89,7 +89,7 @@ def train(config):
     else:
         fitness = np.exp(- max_error_distance * config['Beta']) * (
                 config['Alpha'] * f1_score + (1 - config['Alpha']) * np.exp(-np.abs(np.log(volume))))
-    return {'Loss': values['loss'], 'Fitness': fitness, 'MaxError': max_error_distance, 'F1Score': f1_score,
+        return {'Loss': values['loss'], 'Fitness': fitness, 'MaxError': max_error_distance, 'F1Score': f1_score,
             'VolumeAccuracy': volume, 'EarlyStop': callbacks[0].stopped_epoch}
 
 
@@ -111,12 +111,12 @@ def fixed_config():
         'OutputShape': (20, 20, 20),
         'DataPath': '/nfs/data/TapiaLab/HyperParameterOptimization/Data/Kuka_14_20x20x20.npz',  # Make sure it exists.
         'TrainSamples': 80000,
-        'Epochs': 500,
+        'Epochs': 750,
         'BatchSize': 8,
         'Patience': 2,
         'Alpha': 0.5,
         'Beta': 0.1,
-        'MaxError': 3,
+        'MaxError': 5,
         'layer1': tune.choice([64, 128, 256, 512, 1024, 2048]),
         'layer2': tune.choice([64, 128, 256, 512, 1024, 2048]),
         'layer3': tune.choice([64, 128, 256, 512, 1024, 2048]),
@@ -136,7 +136,7 @@ def main():
     params = get_params(sys.argv[1:])
 
     # ray.init(address='64.106.20.170', num_cpus=1, num_gpus=1)  # Initialize Local
-    ray.init(address='64.106.20.170:6379')  # Initialize on cluster (Started on CLI)
+    ray.init(address='64.106.20.133:6379')  # Initialize on cluster (Started on CLI)
     config = fixed_config()
     search_alg = ConcurrencyLimiter(HyperOptSearch(), max_concurrent=4)
 
@@ -145,12 +145,13 @@ def main():
         name=params.exp_name,  # f"{UID}"
         config=config,
         search_alg=search_alg,
-        num_samples=30,
+        num_samples=40,
         metric="Fitness",
         mode="max",
         local_dir=params.local_dir,
         log_to_file=True,
-        resources_per_trial={'cpu': 1, 'gpu': 1})
+        resources_per_trial={'cpu': 4, 'gpu': 1},
+        stop=tune.stopper.MaximumIterationStopper(1))
 
     print("Best HP found were: ", analysis.best_config)
 
