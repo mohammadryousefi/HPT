@@ -9,9 +9,11 @@ import scipy.ndimage as nd
 
 def parse_args(args):
     ap = argparse.ArgumentParser(
-        description='Computes the euclidean distance transform for the sparse boundary matrix in the given shape. The boundary matrix contains all voxels on the surface boundaries.')
+        description='Computes the euclidean distance transform for the sparse boundary matrix in the given shape. '
+                    'The boundary matrix contains all voxels on the surface boundaries.')
     ap.add_argument(dest='in_file', help='Path to 2D sparse matrix data file with shape (Samples, Values)',
                     metavar='InFile')
+    ap.add_argument('--skip', dest='skip', type=int, help='Skips the first N samples', default=0)
     ap.add_argument('-s', dest='shape', nargs='+', type=int, help='Volume Space Dimensions', metavar='Dimension')
     ap.add_argument('-f', dest='features', type=int, help='The number of features at the beginning of each record',
                     default=0, metavar='Features')
@@ -22,7 +24,7 @@ def parse_args(args):
 
     ns.in_file = pathlib.Path(ns.in_file)
     if ns.out_file is None:
-        ns.out_file = ns.in_file.withstem(ns.in_file.stem + '_edt')
+        ns.out_file = ns.in_file.with_name(ns.in_file.stem + '_edt').with_suffix('.npz')
     else:
         ns.out_file = ns.in_file.joinpath(ns.out_file)
         if ns.out_file.suffix != '.npz':
@@ -44,7 +46,7 @@ if __name__ == '__main__':
     if params.shape is None:
         raise ValueError('Shape undefined.')
     print('Loading data ...', end='')
-    mtx = sp.load_npz(params.in_file)[:, params.features:]
+    mtx = sp.load_npz(params.in_file)[params.skip:, params.features:]
     print(' done.\nComputing euclidean distances ...', end='')
     edt = compute_edt(mtx, params.shape)
     print(' done.\nSaving results ...', end='')
