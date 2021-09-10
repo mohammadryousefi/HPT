@@ -25,7 +25,9 @@
 def train(config):
     import tensorflow.keras as k
     import metric_functions
-
+    import ray.tune as tune
+    import pathlib
+    trial_dir = pathlib.Path(tune.get_trial_dir())
     # Simple Sequential Model with 4 Adjustable Hidden Layers
     # All layers RELU.
     if config['Checkpoint']:
@@ -42,7 +44,8 @@ def train(config):
         metrics = [metric_functions.F1Score(), metric_functions.AverageVolume()]
         model.compile(optimizer=k.optimizers.Adam(1e-4), loss='mse', metrics=metrics)
 
-    callbacks = [k.callbacks.EarlyStopping(patience=config['Patience'])]
+    callbacks = [k.callbacks.TensorBoard(str(trial_dir.joinpath('logs').resolve())),
+                 k.callbacks.EarlyStopping(patience=config['Patience'], restore_best_weights=True)]
     print(model.metrics_names)
     # Load Data
     # Expects CSR matrix of shape N, M where N = Num Samples and M = 2 * DoF + DimX * DimY * DimZ
@@ -77,6 +80,7 @@ def train(config):
     model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=config['Epochs'],
               batch_size=config['BatchSize'], callbacks=callbacks, verbose=0)
 
+    model.save(str(trial_dir.joinpath('model-end-training').resolve()))
     import numpy as np
     values = model.evaluate(x_test, y_test, batch_size=config['BatchSize'], verbose=0, return_dict=True)
     print(values)
@@ -90,7 +94,7 @@ def train(config):
         fitness = np.exp(- max_error_distance * config['Beta']) * (
                 config['Alpha'] * f1_score + (1 - config['Alpha']) * np.exp(-np.abs(np.log(volume))))
         return {'Loss': values['loss'], 'Fitness': fitness, 'MaxError': max_error_distance, 'F1Score': f1_score,
-            'VolumeAccuracy': volume, 'EarlyStop': callbacks[0].stopped_epoch}
+                'VolumeAccuracy': volume, 'EarlyStop': callbacks[0].stopped_epoch}
 
 
 def get_params(args):
