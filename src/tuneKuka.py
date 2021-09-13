@@ -93,8 +93,8 @@ def train(config):
     else:
         fitness = np.exp(- max_error_distance * config['Beta']) * (
                 config['Alpha'] * f1_score + (1 - config['Alpha']) * np.exp(-np.abs(np.log(volume))))
-        return {'Loss': values['loss'], 'Fitness': fitness, 'MaxError': max_error_distance, 'F1Score': f1_score,
-                'VolumeAccuracy': volume, 'EarlyStop': callbacks[0].stopped_epoch}
+    return {'Loss': values['loss'], 'Fitness': fitness, 'MaxError': max_error_distance, 'F1Score': f1_score,
+            'VolumeAccuracy': volume, 'EarlyStop': callbacks[0].stopped_epoch}
 
 
 def get_params(args):
