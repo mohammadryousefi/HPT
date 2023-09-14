@@ -30,9 +30,13 @@ def weighted_loss_averaged(weights):
 def get_model(error_weights):
     features = tf.keras.Input(shape=(14,), name='features')
     pred = tf.keras.layers.Dense(units=500, activation='relu')(features)
+    pred = tf.keras.layers.Dropout(0.5)(pred)
     pred = tf.keras.layers.Dense(units=1000, activation='relu')(pred)
+    pred = tf.keras.layers.Dropout(0.5)(pred)
     pred = tf.keras.layers.Dense(units=2000, activation='relu')(pred)
+    pred = tf.keras.layers.Dropout(0.5)(pred)
     pred = tf.keras.layers.Dense(units=4000, activation='relu')(pred)
+    pred = tf.keras.layers.Dropout(0.5)(pred)
     pred = tf.keras.layers.Dense(units=8000)(pred)
 
     opt = tf.keras.optimizers.Adam(learning_rate=0.0001)
